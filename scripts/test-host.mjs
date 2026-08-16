@@ -18,6 +18,7 @@ import {
   weatherCodeInfo,
   createHandler,
   emptyState,
+  assetBase64,
 } from '../lib/index.js';
 
 let failures = 0;
@@ -192,6 +193,23 @@ function run() {
     // 非法数字回退
     const r2 = await handler('pet.config.update', { satiety: { decayPerMin: -5 } });
     if (r2.value.config.satiety.decayPerMin !== 9.9) throw new Error('negative should be ignored');
+  });
+
+  check('assets: assetBase64 reads the bundled left.webp', () => {
+    const a = assetBase64('left');
+    if (!a.ok) throw new Error(`asset load failed: ${a.error}`);
+    if (a.mime !== 'image/webp') throw new Error('mime');
+    if (a.width !== 1122 || a.height !== 2019) throw new Error(`size ${a.width}x${a.height}`);
+    const buf = Buffer.from(a.base64, 'base64');
+    if (buf[0] !== 0x52 || buf[1] !== 0x49) throw new Error('not RIFF');
+  });
+
+  check('assets: unknown names fall back safely', () => {
+    // 非法名（路径穿越）回退到默认 left，绝不拼接路径
+    const a = assetBase64('../evil');
+    if (!a.ok || a.name !== 'left') throw new Error('path traversal must fall back to left');
+    const b = assetBase64('nonexistent');
+    if (b.ok) throw new Error('missing asset must fail');
   });
 
   check('handler: pet.trash rejects empty paths', async () => {
