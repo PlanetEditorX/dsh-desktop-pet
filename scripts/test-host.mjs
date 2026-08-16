@@ -245,6 +245,28 @@ function run() {
     if (!r.ok || typeof r.value.electronAvailable !== 'boolean') throw new Error('debug shape');
   });
 
+  check('events: session title captured as task name', () => {
+    const state = emptyState();
+    state.satiety = 60;
+    state.satietyUpdatedAt = 0;
+    applyPetEvent(state, DEFAULT_CONFIG, { id: 's1', title: '用量统计插件开发' }, {
+      type: 'request/header',
+      data: { header: { config: { provider: 'opencode', model: 'deepseek-v4-flash' } } },
+    }, 1000);
+    if (state.lastTask.title !== '用量统计插件开发') throw new Error(`title ${state.lastTask.title}`);
+  });
+
+  check('events: string session keeps working (no title)', () => {
+    const state = emptyState();
+    state.satiety = 60;
+    state.satietyUpdatedAt = 0;
+    applyPetEvent(state, DEFAULT_CONFIG, 's1', {
+      type: 'request/header',
+      data: { header: { config: { provider: 'opencode', model: 'm' } } },
+    }, 1000);
+    if (state.lastTask.title !== null) throw new Error('string session → no title');
+  });
+
   check('handler: pet.trash rejects empty paths', async () => {
     const holder = { config: DEFAULT_CONFIG, state: emptyState() };
     const handler = createHandler({ holder, saveConfig: () => {}, saveState: () => {} });
