@@ -161,7 +161,7 @@ function run() {
     if (snap.today.tokens !== 123 || snap.today.calls !== 2) throw new Error(`today ${JSON.stringify(snap.today)}`);
     if (snap.satiety.value !== 42) throw new Error(`satiety ${snap.satiety.value}`);
     if (snap.trashCount !== 5) throw new Error('trashCount');
-    if (snap.config.bubble.ms !== 4000) throw new Error('bubble config');
+    if (snap.config.bubble.ms !== 10000) throw new Error(`bubble config ${snap.config.bubble.ms}`);
     if (snap.task.model !== 'm') throw new Error('task');
   });
 
@@ -183,7 +183,7 @@ function run() {
 
   check('handler: pet.config.update merges and sanitizes', async () => {
     const holder = { config: DEFAULT_CONFIG, state: emptyState() };
-    const handler = createHandler({ holder });
+    const handler = createHandler({ holder, saveConfig: () => {}, saveState: () => {} });
     const r = await handler('pet.config.update', { satiety: { decayPerMin: 9.9, max: 120 }, bubble: { ms: 1234 } });
     if (!r.ok) throw new Error('update failed');
     if (r.value.config.satiety.decayPerMin !== 9.9) throw new Error('decayPerMin');
@@ -214,7 +214,7 @@ function run() {
 
   check('handler: pet.asset wraps result in value', async () => {
     const holder = { config: DEFAULT_CONFIG, state: emptyState() };
-    const handler = createHandler({ holder });
+    const handler = createHandler({ holder, saveConfig: () => {}, saveState: () => {} });
     const r = await handler('pet.asset', { name: 'left' });
     if (!r.ok || !r.value || !r.value.base64) throw new Error('pet.asset 应返回 {ok, value:{base64,...}}');
     if (r.value.mime !== 'image/webp') throw new Error(`mime ${r.value.mime}`);
@@ -223,14 +223,14 @@ function run() {
 
   check('handler: pet.window.state reports closed when no window', async () => {
     const holder = { config: DEFAULT_CONFIG, state: emptyState() };
-    const handler = createHandler({ holder });
+    const handler = createHandler({ holder, saveConfig: () => {}, saveState: () => {} });
     const r = await handler('pet.window.state', {});
     if (!r.ok || r.value.open !== false) throw new Error('无窗口时应 open=false');
   });
 
   check('handler: pet.pos.update saves position', async () => {
     const holder = { config: DEFAULT_CONFIG, state: emptyState() };
-    const handler = createHandler({ holder });
+    const handler = createHandler({ holder, saveConfig: () => {}, saveState: () => {} });
     const r = await handler('pet.pos.update', { x: 123.7, y: 45.2 });
     if (!r.ok || r.value.x !== 124 || r.value.y !== 45) throw new Error('pos rounding');
     if (holder.state.petPos.x !== 124) throw new Error('state not saved');
@@ -240,14 +240,14 @@ function run() {
 
   check('handler: pet.window.debug reports environment', async () => {
     const holder = { config: DEFAULT_CONFIG, state: emptyState() };
-    const handler = createHandler({ holder });
+    const handler = createHandler({ holder, saveConfig: () => {}, saveState: () => {} });
     const r = await handler('pet.window.debug', {});
     if (!r.ok || typeof r.value.electronAvailable !== 'boolean') throw new Error('debug shape');
   });
 
   check('handler: pet.trash rejects empty paths', async () => {
     const holder = { config: DEFAULT_CONFIG, state: emptyState() };
-    const handler = createHandler({ holder });
+    const handler = createHandler({ holder, saveConfig: () => {}, saveState: () => {} });
     const r = await handler('pet.trash', { paths: [] });
     if (r.ok) throw new Error('should fail');
   });
