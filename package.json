@@ -1,0 +1,51 @@
+{
+  "name": "dsh-desktop-pet",
+  "version": "0.1.0",
+  "description": "Desktop pet for DeepSeek Harness: classic deepseek whale-girl in the bottom-right corner, anime speech bubbles showing the running task, drag files onto her to send them to the recycle bin, a satiety state machine (fed by tokens/files, gets hungry then collapses, recovers when fed), and weather accessories.",
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "desktop-pet",
+    "pet",
+    "whale",
+    "trash",
+    "recycle-bin",
+    "satiety",
+    "weather"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
+    }
+  },
+  "scripts": {
+    "check": "node --check lib/index.js && node --check lib/client.js",
+    "test": "node scripts/test-host.mjs",
+    "verify": "npm run check && npm run test"
+  }
+}

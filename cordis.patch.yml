@@ -1,0 +1,13 @@
+# Mount the dsh-desktop-pet plugin into a DeepSeek Harness profile.
+#
+# Install:  dsh plugin --profile web add <this-package>
+# Remove:   dsh plugin --profile web remove dsh-desktop-pet
+#
+# The plugin row carries no static config: all pet settings live in the
+# plugin's own data files `<DSH_HOME>/desktop-pet/config.json` and
+# `state.json`, edited from the web UI (设置 → 桌面宠物). Keeping the row
+# empty lets the same bundle mount into any profile without per-profile
+# configuration.
+- insert:
+    - id: desktop-pet
+      name: dsh-desktop-pet
