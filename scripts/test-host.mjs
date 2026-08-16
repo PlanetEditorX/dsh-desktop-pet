@@ -262,10 +262,10 @@ function run() {
     const state = emptyState();
     state.satiety = 60;
     state.satietyUpdatedAt = 0;
-    // 1) user/message 索引文本
+    // 1) user/message 索引文本（source.kind === 'user'）
     const changed = applyPetEvent(state, DEFAULT_CONFIG, { id: 's1', title: '会话标题' }, {
       type: 'user/message',
-      data: { role: 'user', content: [{ type: 'text', text: '帮我写个 Python 脚本' }, { type: 'tool_use', name: 'x' }] },
+      data: { role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: '帮我写个 Python 脚本' }, { type: 'tool_use', name: 'x' }] },
     }, 1000);
     if (!changed) throw new Error('user/message should touch state');
     if (state.lastUserText !== '帮我写个 Python 脚本') throw new Error(`lastUserText ${state.lastUserText}`);
@@ -279,13 +279,32 @@ function run() {
     // 3) assistant/message 回复也保留用户消息
     applyPetEvent(state, DEFAULT_CONFIG, { id: 's1', title: '会话标题' }, {
       type: 'assistant/message',
-      data: { message: { role: 'assistant', content: [{ type: 'text', text: '好了' }] }, usage: { inputTokens: 100 } },
+      data: { message: { role: 'assistant', source: { kind: 'model', provider: 'p', model: 'm' }, content: [{ type: 'text', text: '好了' }] }, usage: { inputTokens: 100 } },
     }, 3000);
     if (state.lastTask.title !== '帮我写个 Python 脚本') throw new Error(`reply title ${state.lastTask.title}`);
     if (state.lastTask.kind !== 'reply') throw new Error('kind');
     // 4) 空内容用户消息不索引
-    const noop = applyPetEvent(state, DEFAULT_CONFIG, { id: 's1' }, { type: 'user/message', data: { role: 'user', content: [] } }, 4000);
+    const noop = applyPetEvent(state, DEFAULT_CONFIG, { id: 's1' }, { type: 'user/message', data: { role: 'user', source: { kind: 'user' }, content: [] } }, 4000);
     if (noop) throw new Error('empty user message must be ignored');
+  });
+
+  check('events: system-injected user/message (plugin source) is ignored', () => {
+    const state = emptyState();
+    state.satiety = 60;
+    state.satietyUpdatedAt = 0;
+    // time-context / MNEMON 等系统注入：source.kind === 'plugin'，不索引
+    const injected = applyPetEvent(state, DEFAULT_CONFIG, { id: 's1' }, {
+      type: 'user/message',
+      data: { role: 'user', source: { kind: 'plugin', plugin: 'time-context' }, content: [{ type: 'text', text: '当前时间：<time>2026-08-16</time>' }] },
+    }, 1000);
+    if (injected) throw new Error('plugin-injected user/message must be ignored');
+    if (state.lastUserText !== null) throw new Error(`lastUserText polluted: ${state.lastUserText}`);
+    // 无 source 的旧格式消息也不索引（DSH 强制 source，缺省视为非用户输入）
+    const noSource = applyPetEvent(state, DEFAULT_CONFIG, { id: 's1' }, {
+      type: 'user/message',
+      data: { role: 'user', content: [{ type: 'text', text: '无 source' }] },
+    }, 2000);
+    if (noSource) throw new Error('source-less user/message must be ignored');
   });
 
   check('events: user/message concatenates all text blocks', () => {
@@ -296,6 +315,7 @@ function run() {
       type: 'user/message',
       data: {
         role: 'user',
+        source: { kind: 'user' },
         content: [
           { type: 'text', text: '当前时间：<time>2026-08-16</time>' },
           { type: 'text', text: '正文内容' },
