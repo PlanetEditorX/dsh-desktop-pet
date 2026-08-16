@@ -199,13 +199,14 @@ function run() {
     if (r2.value.config.satiety.decayPerMin !== 9.9) throw new Error('negative should be ignored');
   });
 
-  check('assets: assetBase64 reads the bundled left.webp', () => {
+  check('assets: assetBase64 reads the bundled left.png', () => {
     const a = assetBase64('left');
     if (!a.ok) throw new Error(`asset load failed: ${a.error}`);
-    if (a.mime !== 'image/webp') throw new Error('mime');
-    if (a.width !== 1122 || a.height !== 2019) throw new Error(`size ${a.width}x${a.height}`);
+    if (a.mime !== 'image/png') throw new Error('mime');
+    // PNG 立绘不解析 webp 尺寸，width/height 为 null（由前端降采样处理）
+    if (a.width !== null || a.height !== null) throw new Error(`size ${a.width}x${a.height}`);
     const buf = Buffer.from(a.base64, 'base64');
-    if (buf[0] !== 0x52 || buf[1] !== 0x49) throw new Error('not RIFF');
+    if (buf[0] !== 0x89 || buf[1] !== 0x50 || buf[2] !== 0x4e || buf[3] !== 0x47) throw new Error('not PNG');
   });
 
   check('assets: unknown names fall back safely', () => {
@@ -221,8 +222,8 @@ function run() {
     const handler = createHandler({ holder, saveConfig: () => {}, saveState: () => {} });
     const r = await handler('pet.asset', { name: 'left' });
     if (!r.ok || !r.value || !r.value.base64) throw new Error('pet.asset 应返回 {ok, value:{base64,...}}');
-    if (r.value.mime !== 'image/webp') throw new Error(`mime ${r.value.mime}`);
-    if (r.value.width !== 1122) throw new Error('width');
+    if (r.value.mime !== 'image/png') throw new Error(`mime ${r.value.mime}`);
+    if (r.value.width !== null) throw new Error('width');
   });
 
   check('handler: pet.window.state reports closed when no window', async () => {

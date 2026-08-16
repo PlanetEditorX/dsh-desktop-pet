@@ -15,6 +15,10 @@
     "weather"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PlanetEditorX/dsh-desktop-pet.git"
+  },
   "type": "module",
   "main": "lib/index.js",
   "exports": {
