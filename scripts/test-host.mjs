@@ -19,6 +19,9 @@ import {
   createHandler,
   emptyState,
   assetBase64,
+  foldSessionTitle,
+  applyProgressEvent,
+  progressView,
 } from '../lib/index.js';
 
 let failures = 0;
@@ -265,6 +268,35 @@ function run() {
       data: { header: { config: { provider: 'opencode', model: 'm' } } },
     }, 1000);
     if (state.lastTask.title !== null) throw new Error('string session → no title');
+  });
+
+  check('session: foldSessionTitle from session/title events', () => {
+    const t = foldSessionTitle([
+      { type: 'user/message' },
+      { type: 'session/title', data: { title: '桌面宠物开发' } },
+    ]);
+    if (t !== '桌面宠物开发') throw new Error(`fold ${t}`);
+    if (foldSessionTitle(null) !== null) throw new Error('null events');
+    if (foldSessionTitle([{ type: 'x' }]) !== null) throw new Error('no title event');
+  });
+
+  check('progress: phase machine turn→think→stream→tool→done', () => {
+    const state = emptyState();
+    applyProgressEvent(state, { type: 'turn/start' }, 1000);
+    if (state.progress.phase !== 'turn') throw new Error('turn');
+    applyProgressEvent(state, { type: 'step/start' }, 1100);
+    if (state.progress.phase !== 'think') throw new Error('think');
+    applyProgressEvent(state, { type: 'assistant/chunk', data: { chunk: { type: 'text-delta', text: 'hello world' } } }, 1200);
+    if (state.progress.phase !== 'stream') throw new Error('stream');
+    applyProgressEvent(state, { type: 'tool/call', data: { name: 'grep' } }, 1300);
+    if (state.progress.phase !== 'tool' || state.progress.toolName !== 'grep') throw new Error('tool');
+    applyProgressEvent(state, { type: 'tool/result' }, 1350);
+    if (state.progress.phase !== 'stream') throw new Error('back to stream');
+    applyProgressEvent(state, { type: 'turn/end' }, 1400);
+    const v = progressView(state, 1500);
+    if (!v || v.phase !== 'done' || v.pct !== 100) throw new Error('done view');
+    if (progressView(state, 1500 + 90000) !== null) throw new Error('done should expire');
+    if (progressView(emptyState(), 1000) !== null) throw new Error('idle no view');
   });
 
   check('handler: pet.trash rejects empty paths', async () => {
