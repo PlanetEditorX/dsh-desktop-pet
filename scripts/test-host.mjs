@@ -212,6 +212,22 @@ function run() {
     if (b.ok) throw new Error('missing asset must fail');
   });
 
+  check('handler: pet.asset wraps result in value', async () => {
+    const holder = { config: DEFAULT_CONFIG, state: emptyState() };
+    const handler = createHandler({ holder });
+    const r = await handler('pet.asset', { name: 'left' });
+    if (!r.ok || !r.value || !r.value.base64) throw new Error('pet.asset 应返回 {ok, value:{base64,...}}');
+    if (r.value.mime !== 'image/webp') throw new Error(`mime ${r.value.mime}`);
+    if (r.value.width !== 1122) throw new Error('width');
+  });
+
+  check('handler: pet.window.state reports closed when no window', async () => {
+    const holder = { config: DEFAULT_CONFIG, state: emptyState() };
+    const handler = createHandler({ holder });
+    const r = await handler('pet.window.state', {});
+    if (!r.ok || r.value.open !== false) throw new Error('无窗口时应 open=false');
+  });
+
   check('handler: pet.trash rejects empty paths', async () => {
     const holder = { config: DEFAULT_CONFIG, state: emptyState() };
     const handler = createHandler({ holder });
