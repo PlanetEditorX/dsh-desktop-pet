@@ -22,6 +22,7 @@ import {
   foldSessionTitle,
   applyProgressEvent,
   progressView,
+  poseView,
 } from '../lib/index.js';
 
 let failures = 0;
@@ -297,6 +298,43 @@ function run() {
     if (!v || v.phase !== 'done' || v.pct !== 100) throw new Error('done view');
     if (progressView(state, 1500 + 90000) !== null) throw new Error('done should expire');
     if (progressView(emptyState(), 1000) !== null) throw new Error('idle no view');
+  });
+
+  check('pose: event poses surprised/wave expire and priority works', () => {
+    const state = emptyState();
+    const cfg = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+    // 待命 → idle
+    if (poseView(state, cfg, 1000) !== 'idle') throw new Error('idle');
+    // turn/start → surprised（6s 内）
+    applyProgressEvent(state, { type: 'turn/start' }, 1000);
+    if (poseView(state, cfg, 1500) !== 'surprised') throw new Error('surprised');
+    if (poseView(state, cfg, 1000 + 6001) !== 'working') throw new Error('expire to working');
+    // 工作中（progress 活跃）→ working
+    applyProgressEvent(state, { type: 'assistant/chunk', data: { chunk: { type: 'text-delta', text: 'hi' } } }, 12000);
+    if (poseView(state, cfg, 13000) !== 'working') throw new Error('working');
+    // turn/end → wave
+    applyProgressEvent(state, { type: 'turn/end' }, 20000);
+    if (poseView(state, cfg, 20500) !== 'wave') throw new Error('wave');
+    // 饥饿优先于事件姿态
+    state.satiety = cfg.satiety.hungryBelow - 1;
+    state.hungrySince = 1000; // 已饥饿足够久
+    applyProgressEvent(state, { type: 'turn/start' }, 30000);
+    if (poseView(state, cfg, 30500) !== 'hungry') throw new Error('hungry wins');
+    // 趴下最高优先级（低于 collapsedBelow 且饥饿超时）
+    state.satiety = 0;
+    state.hungrySince = -500000; // 饥饿时长 > collapseDelayMin
+    if (poseView(state, cfg, 30500) !== 'collapsed') throw new Error('collapsed wins');
+    // snapshot 携带 pose
+    const snap = snapshot(state, cfg, 30500);
+    if (snap.pose !== 'collapsed') throw new Error('snapshot pose');
+  });
+
+  check('asset: png fallback extension', () => {
+    // whale-maid-show.png 在 assets 中应可读取且 mime=image/png
+    const a = assetBase64('whale-maid-show');
+    if (!a.ok) throw new Error('png asset missing: ' + (a.error || ''));
+    if (a.mime !== 'image/png') throw new Error('mime should be image/png');
+    if (assetBase64('no-such-asset').ok) throw new Error('missing asset should fail');
   });
 
   check('handler: pet.trash rejects empty paths', async () => {
