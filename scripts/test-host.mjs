@@ -315,6 +315,18 @@ function run() {
     if (r.ok) throw new Error('should fail');
   });
 
+  check('handler: pet.window.rect stores window rect', async () => {
+    const holder = { config: DEFAULT_CONFIG, state: emptyState() };
+    const handler = createHandler({ holder, saveConfig: () => {}, saveState: () => {} });
+    const r = await handler('pet.window.rect', { x: 10, y: 20, width: 1280, height: 720 });
+    if (!r.ok) throw new Error('rect should succeed');
+    if (r.value.x !== 10 || r.value.width !== 1280) throw new Error('rect value');
+    const snap = snapshot(holder.state, holder.config);
+    if (!snap.windowRect || snap.windowRect.x !== 10 || snap.windowRect.height !== 720) throw new Error('snapshot windowRect');
+    const bad = await handler('pet.window.rect', { x: 'a' });
+    if (bad.ok) throw new Error('bad rect should fail');
+  });
+
   check('desktop: not available outside desktop mode', async () => {
     if (isDesktopMode()) return; // 本机测试环境 DSH_DESKTOP 未设
     const s = desktopState();
