@@ -228,6 +228,23 @@ function run() {
     if (!r.ok || r.value.open !== false) throw new Error('无窗口时应 open=false');
   });
 
+  check('handler: pet.pos.update saves position', async () => {
+    const holder = { config: DEFAULT_CONFIG, state: emptyState() };
+    const handler = createHandler({ holder });
+    const r = await handler('pet.pos.update', { x: 123.7, y: 45.2 });
+    if (!r.ok || r.value.x !== 124 || r.value.y !== 45) throw new Error('pos rounding');
+    if (holder.state.petPos.x !== 124) throw new Error('state not saved');
+    const bad = await handler('pet.pos.update', { x: 'abc' });
+    if (bad.ok) throw new Error('bad pos should fail');
+  });
+
+  check('handler: pet.window.debug reports environment', async () => {
+    const holder = { config: DEFAULT_CONFIG, state: emptyState() };
+    const handler = createHandler({ holder });
+    const r = await handler('pet.window.debug', {});
+    if (!r.ok || typeof r.value.electronAvailable !== 'boolean') throw new Error('debug shape');
+  });
+
   check('handler: pet.trash rejects empty paths', async () => {
     const holder = { config: DEFAULT_CONFIG, state: emptyState() };
     const handler = createHandler({ holder });
