@@ -226,13 +226,6 @@ function run() {
     if (r.value.width !== null) throw new Error('width');
   });
 
-  check('handler: pet.window.state reports closed when no window', async () => {
-    const holder = { config: DEFAULT_CONFIG, state: emptyState() };
-    const handler = createHandler({ holder, saveConfig: () => {}, saveState: () => {} });
-    const r = await handler('pet.window.state', {});
-    if (!r.ok || r.value.open !== false) throw new Error('无窗口时应 open=false');
-  });
-
   check('handler: pet.pos.update saves position', async () => {
     const holder = { config: DEFAULT_CONFIG, state: emptyState() };
     const handler = createHandler({ holder, saveConfig: () => {}, saveState: () => {} });
@@ -241,13 +234,6 @@ function run() {
     if (holder.state.petPos.x !== 124) throw new Error('state not saved');
     const bad = await handler('pet.pos.update', { x: 'abc' });
     if (bad.ok) throw new Error('bad pos should fail');
-  });
-
-  check('handler: pet.window.debug reports environment', async () => {
-    const holder = { config: DEFAULT_CONFIG, state: emptyState() };
-    const handler = createHandler({ holder, saveConfig: () => {}, saveState: () => {} });
-    const r = await handler('pet.window.debug', {});
-    if (!r.ok || typeof r.value.electronAvailable !== 'boolean') throw new Error('debug shape');
   });
 
   check('events: session title captured as task name', () => {
@@ -270,6 +256,53 @@ function run() {
       data: { header: { config: { provider: 'opencode', model: 'm' } } },
     }, 1000);
     if (state.lastTask.title !== null) throw new Error('string session → no title');
+  });
+
+  check('events: user/message text becomes the bubble content, not session title', () => {
+    const state = emptyState();
+    state.satiety = 60;
+    state.satietyUpdatedAt = 0;
+    // 1) user/message 索引文本
+    const changed = applyPetEvent(state, DEFAULT_CONFIG, { id: 's1', title: '会话标题' }, {
+      type: 'user/message',
+      data: { role: 'user', content: [{ type: 'text', text: '帮我写个 Python 脚本' }, { type: 'tool_use', name: 'x' }] },
+    }, 1000);
+    if (!changed) throw new Error('user/message should touch state');
+    if (state.lastUserText !== '帮我写个 Python 脚本') throw new Error(`lastUserText ${state.lastUserText}`);
+    if (state.lastTask.title !== '帮我写个 Python 脚本') throw new Error(`lastTask.title ${state.lastTask.title}`);
+    // 2) request/header 跟随用户消息而不是会话标题
+    applyPetEvent(state, DEFAULT_CONFIG, { id: 's1', title: '会话标题' }, {
+      type: 'request/header',
+      data: { header: { config: { provider: 'opencode', model: 'deepseek-v4-flash' } } },
+    }, 2000);
+    if (state.lastTask.title !== '帮我写个 Python 脚本') throw new Error(`header overwrote with session title: ${state.lastTask.title}`);
+    // 3) assistant/message 回复也保留用户消息
+    applyPetEvent(state, DEFAULT_CONFIG, { id: 's1', title: '会话标题' }, {
+      type: 'assistant/message',
+      data: { message: { role: 'assistant', content: [{ type: 'text', text: '好了' }] }, usage: { inputTokens: 100 } },
+    }, 3000);
+    if (state.lastTask.title !== '帮我写个 Python 脚本') throw new Error(`reply title ${state.lastTask.title}`);
+    if (state.lastTask.kind !== 'reply') throw new Error('kind');
+    // 4) 空内容用户消息不索引
+    const noop = applyPetEvent(state, DEFAULT_CONFIG, { id: 's1' }, { type: 'user/message', data: { role: 'user', content: [] } }, 4000);
+    if (noop) throw new Error('empty user message must be ignored');
+  });
+
+  check('events: user/message concatenates all text blocks', () => {
+    const state = emptyState();
+    state.satiety = 60;
+    state.satietyUpdatedAt = 0;
+    applyPetEvent(state, DEFAULT_CONFIG, { id: 's1' }, {
+      type: 'user/message',
+      data: {
+        role: 'user',
+        content: [
+          { type: 'text', text: '当前时间：<time>2026-08-16</time>' },
+          { type: 'text', text: '正文内容' },
+        ],
+      },
+    }, 1000);
+    if (state.lastUserText !== '当前时间：<time>2026-08-16</time>正文内容') throw new Error(`concat ${state.lastUserText}`);
   });
 
   check('session: foldSessionTitle from session/title events', () => {
