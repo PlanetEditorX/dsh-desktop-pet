@@ -4,6 +4,8 @@
  * shape, trash path validation, and the WMO weather mapping.
  */
 
+import { readFileSync } from 'node:fs';
+
 import {
   DEFAULT_CONFIG,
   applyPetEvent,
@@ -22,6 +24,13 @@ import {
   foldSessionTitle,
   applyProgressEvent,
   progressView,
+  isDesktopMode,
+  desktopState,
+  startDesktopPet,
+  stopDesktopPet,
+  desktopStateHandler,
+  ensurePetImage,
+  ensurePetScript,
 } from '../lib/index.js';
 
 let failures = 0;
@@ -304,6 +313,45 @@ function run() {
     const handler = createHandler({ holder, saveConfig: () => {}, saveState: () => {} });
     const r = await handler('pet.trash', { paths: [] });
     if (r.ok) throw new Error('should fail');
+  });
+
+  check('desktop: not available outside desktop mode', async () => {
+    if (isDesktopMode()) return; // 本机测试环境 DSH_DESKTOP 未设
+    const s = desktopState();
+    if (s.available !== false) throw new Error('should be unavailable');
+    const r = startDesktopPet({ port: 2881 });
+    if (r.ok) throw new Error('should refuse outside desktop mode');
+    const holder = { config: DEFAULT_CONFIG, state: emptyState() };
+    const handler = createHandler({ holder, saveConfig: () => {}, saveState: () => {} });
+    const rr = await handler('pet.desktop.start', { port: 2881 });
+    if (rr.ok) throw new Error('RPC should fail outside desktop mode');
+    const st = await handler('pet.desktop.state', {});
+    if (!st.ok || st.value.available !== false) throw new Error('state shape');
+  });
+
+  check('desktop: ensurePetImage writes webp to dataDir', () => {
+    const p = ensurePetImage();
+    if (!p) throw new Error('image not written');
+    const buf = readFileSync(p);
+    if (buf[0] !== 0x52 || buf[1] !== 0x49 || buf[2] !== 0x46 || buf[3] !== 0x46) throw new Error('not RIFF/webp');
+  });
+
+  check('desktop: state handler returns snapshot JSON', async () => {
+    const holder = { config: DEFAULT_CONFIG, state: emptyState() };
+    const handler = desktopStateHandler(holder);
+    let status = 0;
+    let body = '';
+    const res = {
+      writeHead: (s, h) => { status = s; },
+      end: (b) => { body = b; },
+    };
+    await handler({ method: 'GET' }, res);
+    if (status !== 200) throw new Error(`status ${status}`);
+    const j = JSON.parse(body);
+    if (typeof j.today.tokens !== 'number') throw new Error('missing snapshot fields');
+    const res405 = { writeHead: (s) => { status = s; }, end: () => {} };
+    await handler({ method: 'POST' }, res405);
+    if (status !== 405) throw new Error('POST should 405');
   });
 }
 
