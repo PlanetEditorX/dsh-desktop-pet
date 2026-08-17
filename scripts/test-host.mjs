@@ -137,12 +137,12 @@ function run() {
       type: 'assistant/message',
       data: { usage: { inputTokens: 100000, outputTokens: 20000, cacheReadTokens: 300000, cacheWriteTokens: 0 } },
     }, 6000);
-    // billed = 100000 + 300000 + 0 = 400000
-    if (state.todayTokens !== 400000) throw new Error(`todayTokens ${state.todayTokens}`);
+    // billed = 100000 + 20000 + 300000 + 0 = 420000（含 outputTokens）
+    if (state.todayTokens !== 420000) throw new Error(`todayTokens ${state.todayTokens}`);
     if (state.todayCalls !== 1) throw new Error('calls');
-    if (state.lastTask.kind !== 'reply' || state.lastTask.tokens !== 400000) throw new Error('lastTask');
-    // satiety = 60 + 400000/300000 ≈ 61.33
-    if (Math.abs(state.satiety - (60 + 4 / 3)) > 1e-9) throw new Error(`satiety ${state.satiety}`);
+    if (state.lastTask.kind !== 'reply' || state.lastTask.tokens !== 420000) throw new Error('lastTask');
+    // satiety = 60 + 420000/20000 = 60 + 21 = 81
+    if (Math.abs(state.satiety - 81) > 1e-9) throw new Error(`satiety ${state.satiety}`);
   });
 
   check('events: irrelevant events are ignored', () => {
@@ -192,7 +192,7 @@ function run() {
     if (!r.ok) throw new Error('update failed');
     if (r.value.config.satiety.decayPerMin !== 9.9) throw new Error('decayPerMin');
     if (r.value.config.satiety.max !== 120) throw new Error('max');
-    if (r.value.config.satiety.tokensPerPoint !== 300000) throw new Error('unchanged field lost');
+    if (r.value.config.satiety.tokensPerPoint !== 20000) throw new Error('unchanged field lost');
     if (r.value.config.bubble.ms !== 1234) throw new Error('bubble');
     // 非法数字回退
     const r2 = await handler('pet.config.update', { satiety: { decayPerMin: -5 } });
