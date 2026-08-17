@@ -6,7 +6,7 @@ DeepSeek Harness（dsh web）的桌面宠物插件：经典深海鲸鱼娘常驻
 - **饱腹状态机**：token 消耗 / 拖入回收的文件会"喂"宠物，饱腹度随时间衰减——饿了会耷拉、长时间不喂会饿趴下（姿态立绘切换），喂食后恢复
 - **拖文件回收**：把文件 / 文件夹从资源管理器拖到宠物身上，她张开嘴"吃掉"——host 端移入系统回收站（Electron `shell.trashItem`，回退 PowerShell RecycleBin）
 - **天气配饰**：Open-Meteo 免费接口（无需 key），按城市显示天气配饰（太阳 / 白云 / 粉色小伞雨天 / 红围巾雪天 / 闪电雷暴），宠物会"打伞"
-- **多姿态立绘**：站立 / 展示 / 惊讶 / 挥手 / 害羞 / 指责六张全身 PNG 立绘（1024×1536），按事件与饱腹状态切换，全部姿态后台预取零闪烁
+- **多姿态立绘**：站立 / 展示 / 惊讶 / 挥手 / 害羞 / 饿趴下六张全身 PNG 立绘（1024×1536），按事件与饱腹状态切换，全部姿态后台预取零闪烁
 - **设置页**：设置 → 桌面宠物，全部参数可调（饱腹阈值 / 衰减速度 / 气泡时长 / 天气城市等）；按住宠物可拖动位置（自动保存）
 
 数据全部保存在本地：
@@ -45,7 +45,7 @@ node scripts/test-host.mjs # host 逻辑端到端测试
 ```
 lib/index.js    host 半区：事件折叠（用户消息索引/任务/用量）、饱腹状态机、回收站、天气、RPC 通道
 lib/client.js   client 半区：右下角浮层宠物（姿态切换、气泡、拖放回收）、设置页 UI
-assets/         六张姿态立绘 PNG（left / whale-maid-show / surprised / wave / shy / scold）
+assets/         六张姿态立绘 PNG（left / whale-maid-show / surprised / wave / shy / collapsed）
 cordis.patch.yml  bundle 挂载补丁
 scripts/        host 逻辑测试 + bundle 开关
 ```

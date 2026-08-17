@@ -209,6 +209,15 @@ function run() {
     if (buf[0] !== 0x89 || buf[1] !== 0x50 || buf[2] !== 0x4e || buf[3] !== 0x47) throw new Error('not PNG');
   });
 
+  check('assets: collapsed pose asset is bundled', () => {
+    // 饿趴下姿态立绘（whale-maid-collapsed.png）
+    const a = assetBase64('whale-maid-collapsed');
+    if (!a.ok) throw new Error(`collapsed asset load failed: ${a.error}`);
+    if (a.mime !== 'image/png') throw new Error(`mime ${a.mime}`);
+    const buf = Buffer.from(a.base64, 'base64');
+    if (buf[0] !== 0x89 || buf[1] !== 0x50 || buf[2] !== 0x4e || buf[3] !== 0x47) throw new Error('not PNG');
+  });
+
   check('assets: unknown names fall back safely', () => {
     // 非法名（路径穿越）回退到默认 left，绝不拼接路径
     const a = assetBase64('../evil');
