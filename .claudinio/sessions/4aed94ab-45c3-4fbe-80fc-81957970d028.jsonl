@@ -1,3 +1,0 @@
-{"kind":"meta","session_id":"4aed94ab-45c3-4fbe-80fc-81957970d028","created_at":1787043285058,"workspace":"D:\\Documents\\DeepSeek\\dsh-desktop-pet"}
-{"kind":"rejected","text":"你好","reason":"Only English is supported. Please write your message in English. (Detected non-English characters: 你好)","ts":1787043285147}
-{"kind":"error","message":"Only English is supported. Please write your message in English. (Detected non-English characters: 你好)","ts":1787043285147}
